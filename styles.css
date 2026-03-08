@@ -1,0 +1,158 @@
+:root {
+  --bg-a: #f8f4e8;
+  --bg-b: #d2f2ff;
+  --panel: rgba(255, 255, 255, 0.88);
+  --ink: #1f2937;
+  --accent: #0f766e;
+  --accent-2: #f97316;
+  --shadow: 0 14px 32px rgba(20, 30, 40, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Fredoka", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 14%, #fff3c6 0%, transparent 28%),
+    radial-gradient(circle at 86% 78%, #c2f1da 0%, transparent 26%),
+    linear-gradient(140deg, var(--bg-a), var(--bg-b));
+}
+
+.app {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 0.9rem 0.9rem 1.4rem;
+}
+
+.top,
+.hud,
+.game-wrap,
+.controls {
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.top {
+  padding: 0.8rem 1rem 0.5rem;
+}
+
+.top h1 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.7vw, 2rem);
+  letter-spacing: 0.02em;
+}
+
+.status {
+  margin: 0.45rem 0 0.25rem;
+  font-size: clamp(0.84rem, 1.8vw, 1rem);
+  line-height: 1.4;
+}
+
+.hud {
+  margin-top: 0.7rem;
+  padding: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.hud label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.hud select,
+.hud button {
+  margin-top: 0.3rem;
+  border-radius: 12px;
+  border: 0;
+  padding: 0.56rem 0.72rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.hud select {
+  background: #ecfeff;
+}
+
+.hud button {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hud button#skipBtn {
+  background: var(--accent-2);
+}
+
+.game-wrap {
+  margin-top: 0.7rem;
+  padding: 0.6rem;
+  display: flex;
+  justify-content: center;
+}
+
+canvas {
+  max-width: 100%;
+  border-radius: 14px;
+  background: #fffaf0;
+  touch-action: none;
+}
+
+.controls {
+  margin-top: 0.7rem;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.56rem;
+  justify-items: center;
+}
+
+.mid-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.56rem;
+}
+
+.ctrl {
+  width: 72px;
+  height: 56px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 1.22rem;
+  font-weight: 700;
+  color: #0a2230;
+  background: linear-gradient(180deg, #d9f7ff, #bce9f7);
+  box-shadow: 0 8px 18px rgba(0, 40, 60, 0.16);
+}
+
+.ctrl.fire {
+  width: 120px;
+  background: linear-gradient(180deg, #ffd0b2, #ffb077);
+}
+
+.ctrl:active {
+  transform: translateY(2px);
+}
+
+@media (min-width: 860px) {
+  .hud {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: end;
+  }
+
+  .controls {
+    width: 250px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

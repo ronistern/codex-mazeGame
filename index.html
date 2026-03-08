@@ -1,0 +1,57 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maze Adventure Web</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="top">
+        <h1>Maze Adventure Web</h1>
+        <p id="status" class="status"></p>
+      </header>
+
+      <section class="hud">
+        <label>
+          Fighters
+          <select id="fighterCount"></select>
+        </label>
+        <label>
+          Avatar
+          <select id="avatarStyle">
+            <option value="explorer">Explorer</option>
+            <option value="ninja">Ninja</option>
+            <option value="robot">Robot</option>
+            <option value="cat">Cat</option>
+          </select>
+        </label>
+        <button id="restartBtn" type="button">Restart Level</button>
+        <button id="skipBtn" type="button">Skip Level</button>
+      </section>
+
+      <section class="game-wrap">
+        <canvas id="mazeCanvas" aria-label="Maze board" role="img"></canvas>
+      </section>
+
+      <section class="controls" aria-label="Touch controls">
+        <button class="ctrl" data-dir="up" type="button">UP</button>
+        <div class="mid-row">
+          <button class="ctrl" data-dir="left" type="button">LEFT</button>
+          <button class="ctrl" data-dir="down" type="button">DOWN</button>
+          <button class="ctrl" data-dir="right" type="button">RIGHT</button>
+        </div>
+        <button id="fireBtn" class="ctrl fire" type="button">FIRE</button>
+      </section>
+    </main>
+
+    <script src="./game.js"></script>
+  </body>
+</html>
