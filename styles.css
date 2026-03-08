@@ -114,7 +114,10 @@ canvas {
   padding: 0.8rem;
   display: grid;
   gap: 0.56rem;
-  justify-items: center;
+  justify-items: end;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .mid-row {
@@ -153,6 +156,6 @@ canvas {
   .controls {
     width: 250px;
     margin-left: auto;
-    margin-right: auto;
+    margin-right: 0;
   }
 }

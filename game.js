@@ -81,7 +81,7 @@ class MazeAdventureWeb {
       else if (k === "arrowdown" || k === "s") this.movePlayer(0, 1);
       else if (k === "arrowleft" || k === "a") this.movePlayer(-1, 0);
       else if (k === "arrowright" || k === "d") this.movePlayer(1, 0);
-      else if (k === " " || k === "f") this.fireGun();
+      else if (k === " ") this.fireGun();
       else if (k === "r") this.restartLevel();
       else if (k === "n") this.skipLevel();
     });
@@ -282,7 +282,10 @@ class MazeAdventureWeb {
     this.currentMaze().chests.forEach((p) => blocked.add(this.posKey(p)));
     if (this.currentMazeIdx === this.mazeCount - 1) blocked.add(this.posKey(this.goal));
 
-    const updated = fighters.map((fighter) => {
+    const updated = [];
+    const occupied = new Set();
+
+    fighters.forEach((fighter) => {
       const options = [fighter];
       [
         [1, 0],
@@ -303,12 +306,30 @@ class MazeAdventureWeb {
           options.push({ x: nx, y: ny });
         }
       });
+
+      // Prevent overlap/flicker: pick only cells not already taken this tick.
+      const nonOverlapping = options.filter((p) => {
+        const key = this.posKey(p);
+        if (!occupied.has(key)) return true;
+        // Allow staying in place only if this fighter's own original tile is still free.
+        return key === this.posKey(fighter) && !occupied.has(key);
+      });
+      const candidates = nonOverlapping.length ? nonOverlapping : [fighter];
+
       const mostlySmart = Math.random() < 0.7;
       if (mostlySmart) {
-        options.sort((a, b) => Math.abs(a.x - px) + Math.abs(a.y - py) - (Math.abs(b.x - px) + Math.abs(b.y - py)));
-        return options[0];
+        candidates.sort(
+          (a, b) =>
+            Math.abs(a.x - px) +
+            Math.abs(a.y - py) -
+            (Math.abs(b.x - px) + Math.abs(b.y - py)),
+        );
+      } else {
+        candidates.sort(() => Math.random() - 0.5);
       }
-      return options[Math.floor(Math.random() * options.length)];
+      const chosen = candidates[0];
+      occupied.add(this.posKey(chosen));
+      updated.push(chosen);
     });
 
     this.currentMaze().fighters = updated;
@@ -408,7 +429,7 @@ class MazeAdventureWeb {
       this.statusNote = "Collected gold chest! +10 score";
       if (!this.hasGun && this.totalChestsCollected >= 5) {
         this.hasGun = true;
-        this.statusNote = "Collected 5 chests! Gun unlocked. Press F/Space or FIRE.";
+        this.statusNote = "Collected 5 chests! Gun unlocked. Press Space or FIRE.";
       }
     }
 
@@ -774,10 +795,31 @@ class MazeAdventureWeb {
     this.ctx.lineWidth = Math.max(1, cs * 0.03);
     this.ctx.fillRect(bx - cs * 0.08, by - cs * 0.04, cs * 0.16, cs * 0.08);
     this.ctx.strokeRect(bx - cs * 0.08, by - cs * 0.04, cs * 0.16, cs * 0.08);
-    this.ctx.fillStyle = "#f59e0b";
+    this.ctx.fillStyle = "#f97316";
     this.ctx.beginPath();
-    this.ctx.arc(bx + dir.x * cs * 0.09, by + dir.y * cs * 0.09, cs * 0.025, 0, Math.PI * 2);
+    this.ctx.arc(bx + dir.x * cs * 0.1, by + dir.y * cs * 0.1, cs * 0.05, 0, Math.PI * 2);
     this.ctx.fill();
+    this.ctx.strokeStyle = "#fff7ed";
+    this.ctx.lineWidth = Math.max(1, cs * 0.025);
+    this.ctx.stroke();
+
+    // Bigger glowing aim dot so direction is easy to see.
+    const pulse = (Math.sin(this.animTime * 0.01) + 1) * 0.5;
+    const tx = cx + dir.x * cs * 0.9;
+    const ty = cy + dir.y * cs * 0.9;
+    const outer = cs * (0.13 + pulse * 0.03);
+    const inner = cs * (0.075 + pulse * 0.02);
+    this.ctx.fillStyle = "rgba(250, 204, 21, 0.35)";
+    this.ctx.beginPath();
+    this.ctx.arc(tx, ty, outer, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.fillStyle = "#facc15";
+    this.ctx.beginPath();
+    this.ctx.arc(tx, ty, inner, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.strokeStyle = "#92400e";
+    this.ctx.lineWidth = Math.max(1, cs * 0.03);
+    this.ctx.stroke();
   }
 
   drawDot(pos, fill, stroke, padRatio) {
