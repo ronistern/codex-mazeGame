@@ -37,18 +37,22 @@
         <button id="skipBtn" type="button">Skip Level</button>
       </section>
 
-      <section class="game-wrap">
-        <canvas id="mazeCanvas" aria-label="Maze board" role="img"></canvas>
-      </section>
+      <section class="play-area">
+        <section class="game-wrap">
+          <canvas id="mazeCanvas" aria-label="Maze board" role="img"></canvas>
+        </section>
 
-      <section class="controls" aria-label="Touch controls">
-        <button class="ctrl" data-dir="up" type="button">UP</button>
-        <div class="mid-row">
-          <button class="ctrl" data-dir="left" type="button">LEFT</button>
-          <button class="ctrl" data-dir="down" type="button">DOWN</button>
-          <button class="ctrl" data-dir="right" type="button">RIGHT</button>
-        </div>
-        <button id="fireBtn" class="ctrl fire" type="button">FIRE</button>
+        <section class="controls" aria-label="Touch controls">
+          <div class="up-row">
+            <button class="ctrl" data-dir="up" type="button" aria-label="Move up">&uarr;</button>
+          </div>
+          <div class="mid-row">
+            <button class="ctrl" data-dir="left" type="button" aria-label="Move left">&larr;</button>
+            <button class="ctrl" data-dir="down" type="button" aria-label="Move down">&darr;</button>
+            <button class="ctrl" data-dir="right" type="button" aria-label="Move right">&rarr;</button>
+          </div>
+          <button id="fireBtn" class="ctrl fire" type="button">FIRE</button>
+        </section>
       </section>
     </main>
 

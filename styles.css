@@ -102,6 +102,11 @@ body {
   justify-content: center;
 }
 
+.play-area {
+  display: grid;
+  gap: 0.7rem;
+}
+
 canvas {
   max-width: 100%;
   border-radius: 14px;
@@ -110,14 +115,17 @@ canvas {
 }
 
 .controls {
-  margin-top: 0.7rem;
   padding: 0.8rem;
   display: grid;
   gap: 0.56rem;
-  justify-items: end;
+  justify-items: center;
   width: fit-content;
-  margin-left: auto;
-  margin-right: 0;
+}
+
+.up-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .mid-row {
@@ -153,9 +161,16 @@ canvas {
     align-items: end;
   }
 
+  .play-area {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .game-wrap {
+    margin-top: 0;
+  }
+
   .controls {
     width: 250px;
-    margin-left: auto;
-    margin-right: 0;
   }
 }

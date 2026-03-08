@@ -23,6 +23,10 @@ class MazeAdventureWeb {
     this.avatarStyle = "explorer";
     this.statusNote = "";
     this.totalChestsCollected = 0;
+    this.hasSword = false;
+    this.swordUsesLeft = 0;
+    this.swordMaxUses = 8;
+    this.swordBroken = false;
     this.hasGun = false;
     this.facing = { x: 1, y: 0 };
     this.fighterTickMs = 450;
@@ -31,6 +35,7 @@ class MazeAdventureWeb {
     this.audioCtx = null;
     this.audioUnlocked = false;
     this.animTime = 0;
+    this.effects = [];
 
     this.mazeCount = 1;
     this.currentMazeIdx = 0;
@@ -283,10 +288,14 @@ class MazeAdventureWeb {
     if (this.currentMazeIdx === this.mazeCount - 1) blocked.add(this.posKey(this.goal));
 
     const updated = [];
-    const occupied = new Set();
+    const remainingOccupied = new Set(fighters.map((f) => this.posKey(f)));
+    const nextOccupied = new Set();
 
     fighters.forEach((fighter) => {
-      const options = [fighter];
+      const hereKey = this.posKey(fighter);
+      remainingOccupied.delete(hereKey);
+
+      const neighbors = [];
       [
         [1, 0],
         [-1, 0],
@@ -303,32 +312,32 @@ class MazeAdventureWeb {
           grid[ny][nx] === 0 &&
           !blocked.has(`${nx},${ny}`)
         ) {
-          options.push({ x: nx, y: ny });
+          neighbors.push({ x: nx, y: ny });
         }
       });
 
-      // Prevent overlap/flicker: pick only cells not already taken this tick.
-      const nonOverlapping = options.filter((p) => {
+      const validMoves = neighbors.filter((p) => {
         const key = this.posKey(p);
-        if (!occupied.has(key)) return true;
-        // Allow staying in place only if this fighter's own original tile is still free.
-        return key === this.posKey(fighter) && !occupied.has(key);
+        return !nextOccupied.has(key) && !remainingOccupied.has(key);
       });
-      const candidates = nonOverlapping.length ? nonOverlapping : [fighter];
 
-      const mostlySmart = Math.random() < 0.7;
-      if (mostlySmart) {
-        candidates.sort(
-          (a, b) =>
-            Math.abs(a.x - px) +
-            Math.abs(a.y - py) -
-            (Math.abs(b.x - px) + Math.abs(b.y - py)),
-        );
-      } else {
-        candidates.sort(() => Math.random() - 0.5);
+      let chosen = fighter;
+      if (validMoves.length > 0) {
+        const mostlySmart = Math.random() < 0.7;
+        if (mostlySmart) {
+          validMoves.sort(
+            (a, b) =>
+              Math.abs(a.x - px) +
+              Math.abs(a.y - py) -
+              (Math.abs(b.x - px) + Math.abs(b.y - py)),
+          );
+        } else {
+          validMoves.sort(() => Math.random() - 0.5);
+        }
+        chosen = validMoves[0];
       }
-      const chosen = candidates[0];
-      occupied.add(this.posKey(chosen));
+
+      nextOccupied.add(this.posKey(chosen));
       updated.push(chosen);
     });
 
@@ -416,27 +425,30 @@ class MazeAdventureWeb {
     const ny = this.player.y + dy;
     if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows || this.currentGrid()[ny][nx] !== 0) return;
 
-    this.player = { x: nx, y: ny };
     this.facing = { x: dx, y: dy };
-    this.moves += 1;
-    this.statusNote = "";
-
-    const chestIdx = this.currentMaze().chests.findIndex((p) => p.x === nx && p.y === ny);
-    if (chestIdx >= 0) {
-      this.currentMaze().chests.splice(chestIdx, 1);
-      this.score += 10;
-      this.totalChestsCollected += 1;
-      this.statusNote = "Collected gold chest! +10 score";
-      if (!this.hasGun && this.totalChestsCollected >= 5) {
-        this.hasGun = true;
-        this.statusNote = "Collected 5 chests! Gun unlocked. Press Space or FIRE.";
+    const fighterIdx = this.currentMaze().fighters.findIndex((p) => p.x === nx && p.y === ny);
+    if (fighterIdx >= 0) {
+      if (this.hasSword && this.swordUsesLeft > 0) {
+        this.currentMaze().fighters.splice(fighterIdx, 1);
+        this.swordUsesLeft -= 1;
+        this.addKillEffect({ x: nx, y: ny });
+        this.statusNote = `Sword strike! Fighter defeated. Sword uses left: ${this.swordUsesLeft}.`;
+        if (this.swordUsesLeft === 0) {
+          this.hasSword = false;
+          this.swordBroken = true;
+          this.statusNote = "Sword strike! Fighter defeated. Your sword broke.";
+        }
+      } else {
+        this.handleCaught();
+        return;
       }
+    } else {
+      this.statusNote = "";
     }
 
-    if (this.currentMaze().fighters.some((p) => p.x === nx && p.y === ny)) {
-      this.handleCaught();
-      return;
-    }
+    this.player = { x: nx, y: ny };
+    this.moves += 1;
+    this.collectChestIfPresent(nx, ny);
 
     this.useCaveIfPresent();
     const won = this.currentMazeIdx === this.mazeCount - 1 && this.player.x === this.goal.x && this.player.y === this.goal.y;
@@ -446,6 +458,27 @@ class MazeAdventureWeb {
       this.isLevelComplete = true;
       this.level += 1;
       window.setTimeout(() => this.newLevel(), 1200);
+    }
+  }
+
+  collectChestIfPresent(nx, ny) {
+    const chestIdx = this.currentMaze().chests.findIndex((p) => p.x === nx && p.y === ny);
+    if (chestIdx < 0) return;
+
+    this.currentMaze().chests.splice(chestIdx, 1);
+    this.score += 10;
+    this.totalChestsCollected += 1;
+    this.statusNote = "Collected a gold coin! +10 score";
+
+    if (!this.hasSword && !this.swordBroken && this.totalChestsCollected >= 1) {
+      this.hasSword = true;
+      this.swordUsesLeft = this.swordMaxUses;
+      this.statusNote = `Collected a gold coin! Sword unlocked (${this.swordUsesLeft} uses).`;
+    }
+
+    if (!this.hasGun && this.totalChestsCollected >= 5) {
+      this.hasGun = true;
+      this.statusNote = "Collected 5 coins! Gun unlocked. Press Space or FIRE.";
     }
   }
 
@@ -466,50 +499,76 @@ class MazeAdventureWeb {
   fireGun() {
     if (!this.hasGun) {
       const remaining = Math.max(0, 5 - this.totalChestsCollected);
-      this.statusNote = `Collect ${remaining} more chest${remaining === 1 ? "" : "s"} to unlock gun.`;
+      this.statusNote = `Collect ${remaining} more coin${remaining === 1 ? "" : "s"} to unlock gun.`;
       this.updateStatus();
       return;
     }
     const fighters = this.currentMaze().fighters;
+    const shot = this.traceShotLine();
+    this.addShotEffect(shot.end);
+
     if (!fighters.length) {
       this.statusNote = "No fighters in this maze.";
       this.updateStatus();
       return;
     }
 
-    const targetIdx = this.findTargetFighterIndexInLine();
-    if (targetIdx < 0) {
-      this.statusNote = "No fighter in firing line.";
+    if (shot.targetIdx < 0) {
+      this.statusNote = "Shot fired in a straight line, no fighter hit.";
       this.updateStatus();
       return;
     }
 
-    const prev = fighters[targetIdx];
-    const next = this.randomOpenCellForFighter(targetIdx);
+    const prev = fighters[shot.targetIdx];
+    const next = this.randomOpenCellForFighter(shot.targetIdx);
     if (!next) {
       this.statusNote = "No free cell to relocate fighter.";
       this.updateStatus();
       return;
     }
 
-    fighters[targetIdx] = next;
-    this.statusNote = `Zap! Fighter moved from (${prev.x},${prev.y}) to a new location.`;
+    fighters[shot.targetIdx] = next;
+    this.statusNote = `Zap! Straight shot hit fighter at (${prev.x},${prev.y}) and relocated it.`;
     this.updateStatus();
     this.draw();
   }
 
-  findTargetFighterIndexInLine() {
+  traceShotLine() {
     const dir = this.facing.x === 0 && this.facing.y === 0 ? { x: 1, y: 0 } : this.facing;
     const grid = this.currentGrid();
     let x = this.player.x + dir.x;
     let y = this.player.y + dir.y;
+    let targetIdx = -1;
+    let end = { x: this.player.x, y: this.player.y };
     while (x >= 0 && y >= 0 && x < this.cols && y < this.rows && grid[y][x] === 0) {
+      end = { x, y };
       const idx = this.currentMaze().fighters.findIndex((f) => f.x === x && f.y === y);
-      if (idx >= 0) return idx;
+      if (idx >= 0) {
+        targetIdx = idx;
+        break;
+      }
       x += dir.x;
       y += dir.y;
     }
-    return -1;
+    return { targetIdx, end };
+  }
+
+  addKillEffect(pos) {
+    this.effects.push({
+      type: "kill",
+      x: pos.x,
+      y: pos.y,
+      until: performance.now() + 700,
+    });
+  }
+
+  addShotEffect(endPos) {
+    this.effects.push({
+      type: "shot",
+      from: { x: this.player.x, y: this.player.y },
+      to: { x: endPos.x, y: endPos.y },
+      until: performance.now() + 180,
+    });
   }
 
   randomOpenCellForFighter(excludeIndex) {
@@ -534,9 +593,16 @@ class MazeAdventureWeb {
       return;
     }
     const note = this.statusNote ? ` | ${this.statusNote}` : "";
-    const gunText = this.hasGun ? "Gun READY" : `Gun ${this.totalChestsCollected}/5 chests`;
+    const gunText = this.hasGun ? "Gun READY" : `Gun ${this.totalChestsCollected}/5 coins`;
+    const swordText = this.hasSword
+      ? `Sword ${this.swordUsesLeft}/${this.swordMaxUses}`
+      : this.swordBroken
+        ? "Sword BROKEN"
+        : this.totalChestsCollected >= 1
+          ? "Sword READY"
+          : "Sword locked";
     this.statusEl.textContent =
-      `Level ${this.level} | Maze ${this.currentMazeIdx + 1}/${this.mazeCount} | Moves ${this.moves} | Score ${this.score} | Chests ${this.currentMaze().chests.length} | Fighters ${this.currentMaze().fighters.length} | ${gunText}${note}`;
+      `Level ${this.level} | Maze ${this.currentMazeIdx + 1}/${this.mazeCount} | Moves ${this.moves} | Score ${this.score} | Coins ${this.currentMaze().chests.length} | Fighters ${this.currentMaze().fighters.length} | ${swordText} | ${gunText}${note}`;
     this.statusEl.style.color = "#1f2937";
   }
 
@@ -579,6 +645,7 @@ class MazeAdventureWeb {
     if (this.currentMazeIdx === this.mazeCount - 1) this.drawGoal(this.goal);
     this.drawChests();
     this.drawFighters();
+    this.drawEffects();
     this.drawPlayer(this.player);
   }
 
@@ -604,13 +671,68 @@ class MazeAdventureWeb {
 
   drawChests() {
     this.currentMaze().chests.forEach((p) => {
-      this.drawDot(p, "#facc15", "#ca8a04", 0.2);
-      this.ctx.fillStyle = "#92400e";
-      this.ctx.font = `${Math.max(12, this.cellSize * 0.33)}px Fredoka`;
-      this.ctx.textAlign = "center";
-      this.ctx.textBaseline = "middle";
-      this.ctx.fillText("G", (p.x + 0.5) * this.cellSize, (p.y + 0.54) * this.cellSize);
+      const cx = (p.x + 0.5) * this.cellSize;
+      const cy = (p.y + 0.5) * this.cellSize;
+      const r = this.cellSize * 0.27;
+      this.ctx.fillStyle = "#facc15";
+      this.ctx.strokeStyle = "#ca8a04";
+      this.ctx.lineWidth = Math.max(2, this.cellSize * 0.07);
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      this.ctx.strokeStyle = "#92400e";
+      this.ctx.lineWidth = Math.max(1, this.cellSize * 0.04);
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, r * 0.68, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      this.ctx.fillStyle = "rgba(255,255,255,0.35)";
+      this.ctx.beginPath();
+      this.ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.35, 0, Math.PI * 2);
+      this.ctx.fill();
     });
+  }
+
+  drawEffects() {
+    const now = performance.now();
+    this.effects = this.effects.filter((e) => e.until > now);
+    for (const effect of this.effects) {
+      if (effect.type === "shot") {
+        const x1 = (effect.from.x + 0.5) * this.cellSize;
+        const y1 = (effect.from.y + 0.5) * this.cellSize;
+        const x2 = (effect.to.x + 0.5) * this.cellSize;
+        const y2 = (effect.to.y + 0.5) * this.cellSize;
+        this.ctx.strokeStyle = "rgba(249,115,22,0.9)";
+        this.ctx.lineWidth = Math.max(2, this.cellSize * 0.08);
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.stroke();
+        this.ctx.fillStyle = "#facc15";
+        this.ctx.beginPath();
+        this.ctx.arc(x2, y2, Math.max(3, this.cellSize * 0.1), 0, Math.PI * 2);
+        this.ctx.fill();
+      } else if (effect.type === "kill") {
+        const cx = (effect.x + 0.5) * this.cellSize;
+        const cy = (effect.y + 0.5) * this.cellSize;
+        const r = this.cellSize * 0.28;
+        this.ctx.strokeStyle = "#dc2626";
+        this.ctx.lineWidth = Math.max(2, this.cellSize * 0.08);
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx - r, cy - r);
+        this.ctx.lineTo(cx + r, cy + r);
+        this.ctx.moveTo(cx + r, cy - r);
+        this.ctx.lineTo(cx - r, cy + r);
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = "rgba(220,38,38,0.2)";
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, r * 0.9, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+    }
   }
 
   drawFighters() {
