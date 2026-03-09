@@ -51,6 +51,11 @@ class MazeAdventureWeb {
 
   setupControls() {
     const unlockAudio = () => this.unlockAudio();
+    const blurControl = (control) => {
+      if (document.activeElement === control) {
+        control.blur();
+      }
+    };
     document.addEventListener("pointerdown", unlockAudio, { once: true });
     document.addEventListener("keydown", unlockAudio, { once: true });
 
@@ -76,9 +81,18 @@ class MazeAdventureWeb {
       this.draw();
     });
 
-    this.restartBtn.addEventListener("click", () => this.restartLevel());
-    this.skipBtn.addEventListener("click", () => this.skipLevel());
-    this.fireBtn.addEventListener("click", () => this.fireGun());
+    this.restartBtn.addEventListener("click", () => {
+      this.restartLevel();
+      blurControl(this.restartBtn);
+    });
+    this.skipBtn.addEventListener("click", () => {
+      this.skipLevel();
+      blurControl(this.skipBtn);
+    });
+    this.fireBtn.addEventListener("click", () => {
+      this.fireGun();
+      blurControl(this.fireBtn);
+    });
 
     document.addEventListener("keydown", (event) => {
       const k = event.key.toLowerCase();
@@ -98,6 +112,7 @@ class MazeAdventureWeb {
         if (dir === "down") this.movePlayer(0, 1);
         if (dir === "left") this.movePlayer(-1, 0);
         if (dir === "right") this.movePlayer(1, 0);
+        blurControl(btn);
       });
     });
 
